@@ -34,6 +34,12 @@ def config_files(environ=None, config=None):
     except KeyError:
         pass
 
+    # High priority: CRESTIC_CONFIG_FILE
+    try:
+        return [environ['CRESTIC_CONFIG_FILE']]
+    except KeyError:
+        pass
+
     # High priority: crestic-config argument
     if config is None:
         pass
@@ -44,12 +50,6 @@ def config_files(environ=None, config=None):
             return [config]
         except FileNotFoundError:
             pass
-
-    # High priority: CRESTIC_CONFIG_FILE
-    try:
-        return [environ['CRESTIC_CONFIG_FILE']]
-    except KeyError:
-        pass
 
     return [os.path.join(x, 'crestic.cfg') for x in paths.split(os.pathsep)]
 
