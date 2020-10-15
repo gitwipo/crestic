@@ -8,7 +8,7 @@ import subprocess
 import configparser
 
 
-def config_files(environ=None):
+def config_files(environ=None, config=None):
     if environ is None:
         environ = {}
 
@@ -33,6 +33,17 @@ def config_files(environ=None):
         paths = environ['CRESTIC_CONFIG_PATHS']
     except KeyError:
         pass
+
+    # High priority: crestic-config argument
+    if config is None:
+        pass
+    else:
+        try:
+            with open(config) as fobj:
+                pass
+            return [config]
+        except FileNotFoundError:
+            pass
 
     # High priority: CRESTIC_CONFIG_FILE
     try:
@@ -63,22 +74,31 @@ def valid_preset(value):
 
 
 def main(argv, environ=None, conffile=None, dryrun=None):
-    if environ is None:
-        environ = os.environ
-
-    if conffile is None:
-        conffile = config_files(environ)
-
-    if dryrun is None:
-        dryrun = environ.get("CRESTIC_DRYRUN", False)
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("preset", nargs="?", type=valid_preset)
     parser.add_argument("command", help="the restic command")
+    parser.add_argument("--crestic-config", type=str,
+                        help="Crestic config file path.")
+    parser.add_argument("--crestic-dry-run", action="store_true",
+                        help="Run crestic in dry-run mode.")
+
+    crestic_args = parser.parse_args()
+    crestic_config = crestic_args.crestic_config
+    dryrun = crestic_args.crestic_dry_run
+
+    if environ is None:
+        environ = os.environ
+
+    if conffile is None:
+        conffile = config_files(environ, crestic_config)
+
+    if dryrun is None:
+        dryrun = environ.get("CRESTIC_DRYRUN", False)
 
     # CLI options that override values given in config file
     for arg in argv:
-        if arg.startswith(("-", "--")) and arg != "--":
+        if arg.startswith(("-", "--")) and arg != "--" and not arg.startswith("--crestic-"):
             try:
                 parser.add_argument(arg, nargs='?', action='append', dest=arg.lstrip("-"))
             except argparse.ArgumentError:
@@ -152,6 +172,11 @@ def main(argv, environ=None, conffile=None, dryrun=None):
     del python_args_dict['preset']
     del python_args_dict['command']
     del python_args_dict['arguments']
+
+    # del crestic arguments
+    del python_args_dict["crestic_config"]
+    del python_args_dict["crestic_dry_run"]
+
     restic_options.update(python_args_dict)
 
     # Construct command
