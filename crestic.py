@@ -13,30 +13,30 @@ def config_files(environ=None, config=None):
         environ = {}
 
     # Lowest priority: hardcoded values
-    paths = os.pathsep.join([
-        os.path.expanduser('~/.config/crestic'),
-        '/etc/crestic'
-    ])
+    paths = os.pathsep.join([pathexpand("~/.config/crestic"), "/etc/crestic"])
 
     # Low priority: optional appdirs import
     try:
         import appdirs
-        paths = os.pathsep.join([
-            appdirs.user_config_dir('crestic'),
-            appdirs.site_config_dir('crestic', multipath=True)
-        ])
+
+        paths = os.pathsep.join(
+            [
+                appdirs.user_config_dir("crestic"),
+                appdirs.site_config_dir("crestic", multipath=True),
+            ]
+        )
     except ImportError as e:
         pass
 
     # Medium priority: CRESTIC_CONFIG_PATHS
     try:
-        paths = environ['CRESTIC_CONFIG_PATHS']
+        paths = environ["CRESTIC_CONFIG_PATHS"]
     except KeyError:
         pass
 
     # High priority: CRESTIC_CONFIG_FILE
     try:
-        return [environ['CRESTIC_CONFIG_FILE']]
+        return [environ["CRESTIC_CONFIG_FILE"]]
     except KeyError:
         pass
 
@@ -51,7 +51,7 @@ def config_files(environ=None, config=None):
         except FileNotFoundError:
             pass
 
-    return [os.path.join(x, 'crestic.cfg') for x in paths.split(os.pathsep)]
+    return [os.path.join(x, "crestic.cfg") for x in paths.split(os.pathsep)]
 
 
 def split(string, delimiter="@", maxsplit=1):
@@ -68,20 +68,24 @@ def split(string, delimiter="@", maxsplit=1):
 def valid_preset(value):
     if not re.match(r"^[^@]+(@[^@]+)*$", value):
         raise argparse.ArgumentTypeError(
-            "%s is an invalid preset name, only preset names in the format of name[@suffix] are allowed." % value
+            "%s is an invalid preset name, only preset names in the format of name[@suffix] are allowed."
+            % value
         )
     return value
 
 
-def main(argv, environ=None, conffile=None, dryrun=None):
+def pathexpand(val):
+    return os.path.expanduser(os.path.expandvars(val))
 
+
+def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("preset", nargs="?", type=valid_preset)
     parser.add_argument("command", help="the restic command")
-    parser.add_argument("--crestic-config", type=str,
-                        help="Crestic config file path.")
-    parser.add_argument("--crestic-dry-run", action="store_true",
-                        help="Run crestic in dry-run mode.")
+    parser.add_argument("--crestic-config", type=str, help="Crestic config file path.")
+    parser.add_argument(
+        "--crestic-dry-run", action="store_true", help="Run crestic in dry-run mode."
+    )
 
     crestic_args = parser.parse_args()
     crestic_config = crestic_args.crestic_config
@@ -96,18 +100,30 @@ def main(argv, environ=None, conffile=None, dryrun=None):
     if dryrun is None:
         dryrun = environ.get("CRESTIC_DRYRUN", False)
 
+    if executable is None:
+        executable = environ.get("CRESTIC_EXECUTABLE", "restic").split()
+
     # CLI options that override values given in config file
     for arg in argv:
-        if arg.startswith(("-", "--")) and arg != "--" and not arg.startswith("--crestic-"):
+        if (
+            arg.startswith(("-", "--"))
+            and arg != "--"
+            and not arg.startswith("--crestic-")
+        ):
             try:
-                parser.add_argument(arg, nargs='?', action='append', dest=arg.lstrip("-"))
+                parser.add_argument(
+                    arg, nargs="?", action="append", dest=arg.lstrip("-")
+                )
             except argparse.ArgumentError:
                 pass
 
     parser.add_argument(
         "arguments", nargs="*", help="positional arguments for the restic command"
     )
-    python_args = parser.parse_args(argv)
+    try:
+        python_args = parser.parse_intermixed_args(argv)
+    except AttributeError:
+        python_args = parser.parse_args(argv)
 
     config = configparser.ConfigParser()
     config.optionxform = str  # dont map config keys to lower case
@@ -152,26 +168,25 @@ def main(argv, environ=None, conffile=None, dryrun=None):
             pass
 
     restic_options = {
-        k: v.splitlines() if v != "" else [""]
-        for k, v in restic_options.items()
+        k: v.splitlines() if v != "" else [""] for k, v in restic_options.items()
     }
 
     # Override config arguments with arguments from CLI
     if python_args.arguments:
-        restic_options['arguments'] = python_args.arguments
+        restic_options["arguments"] = python_args.arguments
 
     # Extract positional arguments from options dict
     try:
-        restic_arguments = restic_options['arguments']
-        del restic_options['arguments']
+        restic_arguments = restic_options["arguments"]
+        del restic_options["arguments"]
     except KeyError:
         restic_arguments = []
 
     # Override config options with options from CLI
     python_args_dict = dict(vars(python_args))
-    del python_args_dict['preset']
-    del python_args_dict['command']
-    del python_args_dict['arguments']
+    del python_args_dict["preset"]
+    del python_args_dict["command"]
+    del python_args_dict["arguments"]
 
     # del crestic arguments
     del python_args_dict["crestic_config"]
@@ -180,7 +195,8 @@ def main(argv, environ=None, conffile=None, dryrun=None):
     restic_options.update(python_args_dict)
 
     # Construct command
-    argstring = ["restic", f"{python_args.command}"]
+    argstring = executable
+    argstring.append(f"{python_args.command}")
     for key, lines in restic_options.items():
         if lines is not None:
             for value in lines:
@@ -193,9 +209,13 @@ def main(argv, environ=None, conffile=None, dryrun=None):
     argstring += restic_arguments
 
     argstring = [val for val in argstring if val != ""]
+    argstring = [pathexpand(val) for val in argstring]
 
     if dryrun:
-        print("             Warning:", "Executing in debug mode. restic will not run, backups are not touched!")
+        print(
+            "             Warning:",
+            "Executing in debug mode. restic will not run, backups are not touched!",
+        )
         print("        Config files:", ", ".join(conffile))
         print("   Config files used:", ", ".join(conffile_read))
         print("     Config sections:", ", ".join(sections))
@@ -206,7 +226,7 @@ def main(argv, environ=None, conffile=None, dryrun=None):
         return 0
     else:
         try:
-            return subprocess.call(" ".join(argstring), env=restic_environ, shell=True)
+            return subprocess.call(argstring, env=restic_environ, shell=False)
         except KeyboardInterrupt:
             return 130
 
