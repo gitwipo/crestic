@@ -56,8 +56,8 @@ def config_files(environ=None, config=None):
 
 def split(string, delimiter="@", maxsplit=1):
     """
-    Split a string using a delimiter string. But keep the delimiter in all returned segments
-
+    Split a string using a delimiter string.
+    But keep the delimiter in all returned segments.
     """
     splits = string.split(delimiter, maxsplit=maxsplit)
     splits[1:] = [delimiter + s for s in splits[1:]]
@@ -68,7 +68,8 @@ def split(string, delimiter="@", maxsplit=1):
 def valid_preset(value):
     if not re.match(r"^[^@]+(@[^@]+)*$", value):
         raise argparse.ArgumentTypeError(
-            "%s is an invalid preset name, only preset names in the format of name[@suffix] are allowed."
+            "%s is an invalid preset name, \
+only preset names in the format of name[@suffix] are allowed."
             % value
         )
     return value
