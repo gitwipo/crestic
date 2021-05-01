@@ -25,7 +25,7 @@ def config_files(environ=None, config=None):
                 appdirs.site_config_dir("crestic", multipath=True),
             ]
         )
-    except ImportError as e:
+    except ImportError:
         pass
 
     # Medium priority: CRESTIC_CONFIG_PATHS
@@ -45,7 +45,7 @@ def config_files(environ=None, config=None):
         pass
     else:
         try:
-            with open(config) as fobj:
+            with open(config):
                 pass
             return [config]
         except FileNotFoundError:
