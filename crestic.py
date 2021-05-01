@@ -224,11 +224,11 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
         print("   Env sections used:", ", ".join(envsections_read))
         print("    Expanded command:", " ".join(argstring))
         return 0
-    else:
-        try:
-            return subprocess.call(argstring, env=restic_environ, shell=False)
-        except KeyboardInterrupt:
-            return 130
+
+    try:
+        return subprocess.call(argstring, env=restic_environ, shell=False)
+    except KeyboardInterrupt:
+        return 130
 
 
 def cli():
