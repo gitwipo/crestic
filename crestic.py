@@ -68,8 +68,8 @@ def split(string, delimiter="@", maxsplit=1):
 def valid_preset(value):
     if not re.match(r"^[^@]+(@[^@]+)*$", value):
         raise argparse.ArgumentTypeError(
-            "{} is an invalid preset name, only preset names in the format of"
-            "name[@suffix] are allowed.".format(value)
+            f"{value} is an invalid preset name, only preset names in the format of "
+            "name[@suffix] are allowed."
         )
     return value
 
