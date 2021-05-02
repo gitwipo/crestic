@@ -87,6 +87,20 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
         "--crestic-dry-run", action="store_true", help="Run crestic in dry-run mode."
     )
 
+    # CLI options that override values given in config file
+    for arg in argv:
+        if (
+            arg.startswith(("-", "--"))
+            and arg != "--"
+            and not arg.startswith("--crestic-")
+        ):
+            try:
+                parser.add_argument(
+                    arg, nargs="?", action="append", dest=arg.lstrip("-")
+                )
+            except argparse.ArgumentError:
+                pass
+
     crestic_args = parser.parse_args()
     crestic_config = crestic_args.crestic_config
     dryrun = crestic_args.crestic_dry_run
@@ -102,20 +116,6 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
 
     if executable is None:
         executable = environ.get("CRESTIC_EXECUTABLE", "restic").split()
-
-    # CLI options that override values given in config file
-    for arg in argv:
-        if (
-            arg.startswith(("-", "--"))
-            and arg != "--"
-            and not arg.startswith("--crestic-")
-        ):
-            try:
-                parser.add_argument(
-                    arg, nargs="?", action="append", dest=arg.lstrip("-")
-                )
-            except argparse.ArgumentError:
-                pass
 
     parser.add_argument(
         "arguments", nargs="*", help="positional arguments for the restic command"
