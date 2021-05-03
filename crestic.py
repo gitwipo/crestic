@@ -167,9 +167,13 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
         except KeyError:
             pass
 
-    restic_options = {
-        k: v.splitlines() if v != "" else [""] for k, v in restic_options.items()
-    }
+    for k, v in restic_options.copy().items():
+        if len(v.split(" ")) > 1:
+            restic_options[k] = v.split(" ")
+        elif v != "":
+            restic_options[k] = v.splitlines()
+        else:
+            restic_options[k] = [""]
 
     # Override config arguments with arguments from CLI
     if python_args.arguments:
