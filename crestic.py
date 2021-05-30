@@ -83,6 +83,7 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
     parser.add_argument("preset", nargs="?", type=valid_preset)
     parser.add_argument("command", help="the restic command")
     parser.add_argument("--crestic-config", type=str, help="Crestic config file path.")
+    parser.add_argument("--crestic-exec", type=str, help="Path to restic executable")
     parser.add_argument(
         "--crestic-dry-run", action="store_true", help="Run crestic in dry-run mode."
     )
@@ -112,6 +113,7 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
 
     crestic_config = python_args.crestic_config
     dryrun = python_args.crestic_dry_run
+    restic_exec = python_args.crestic_exec
 
     if environ is None:
         environ = os.environ
@@ -123,7 +125,7 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
         dryrun = environ.get("CRESTIC_DRYRUN", False)
 
     if executable is None:
-        executable = environ.get("CRESTIC_EXECUTABLE", "restic").split()
+        executable = restic_exec or environ.get("CRESTIC_EXECUTABLE", "restic").split()
 
     config = configparser.ConfigParser()
     config.optionxform = str  # dont map config keys to lower case
@@ -194,6 +196,7 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
 
     # del crestic arguments
     del python_args_dict["crestic_config"]
+    del python_args_dict["crestic_exec"]
     del python_args_dict["crestic_dry_run"]
 
     restic_options.update(python_args_dict)
