@@ -101,9 +101,17 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
             except argparse.ArgumentError:
                 pass
 
-    crestic_args = parser.parse_args()
-    crestic_config = crestic_args.crestic_config
-    dryrun = crestic_args.crestic_dry_run
+    parser.add_argument(
+        "arguments", nargs="*", help="positional arguments for the restic command"
+    )
+
+    try:
+        python_args = parser.parse_intermixed_args(argv)
+    except AttributeError:
+        python_args = parser.parse_args(argv)
+
+    crestic_config = python_args.crestic_config
+    dryrun = python_args.crestic_dry_run
 
     if environ is None:
         environ = os.environ
@@ -116,14 +124,6 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
 
     if executable is None:
         executable = environ.get("CRESTIC_EXECUTABLE", "restic").split()
-
-    parser.add_argument(
-        "arguments", nargs="*", help="positional arguments for the restic command"
-    )
-    try:
-        python_args = parser.parse_intermixed_args(argv)
-    except AttributeError:
-        python_args = parser.parse_args(argv)
 
     config = configparser.ConfigParser()
     config.optionxform = str  # dont map config keys to lower case
