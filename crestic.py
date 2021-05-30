@@ -112,7 +112,7 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
         python_args = parser.parse_args(argv)
 
     crestic_config = python_args.crestic_config
-    dryrun = python_args.crestic_dry_run
+    crestic_dryrun = python_args.crestic_dry_run
     restic_exec = python_args.crestic_exec
 
     if environ is None:
@@ -122,7 +122,7 @@ def main(argv, environ=None, conffile=None, dryrun=None, executable=None):
         conffile = config_files(environ, crestic_config)
 
     if dryrun is None:
-        dryrun = environ.get("CRESTIC_DRYRUN", False)
+        dryrun = crestic_dryrun or environ.get("CRESTIC_DRYRUN", False)
 
     if executable is None:
         executable = restic_exec or environ.get("CRESTIC_EXECUTABLE", "restic").split()
